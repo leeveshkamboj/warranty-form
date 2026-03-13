@@ -52,3 +52,4 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Next.js 16** (App Router), TypeScript, Tailwind CSS
 - **MongoDB** via Mongoose
 - **Admin auth** – Users stored in MongoDB; add users with `npm run add-admin -- <username> <password>`. Session cookie signed with `SESSION_SECRET`; password checked with bcrypt
+# warranty-form
