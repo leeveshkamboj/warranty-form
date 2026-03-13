@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Product Warranty Registration
 
-## Getting Started
+A Next.js app with a product warranty registration form (inspired by [Cognito Forms Product Warranty Registration](https://www.cognitoforms.com/Registerproductforwarranty/ProductWarrantyRegistration)) and an admin area to view submissions. Data is stored in MongoDB.
 
-First, run the development server:
+## Features
+
+- **Form page** (`/register`) – Contact info, address, product details (name, serial number, purchase date, place of purchase, category, etc.)
+- **Submit to MongoDB** – Registrations are saved via `/api/register`
+- **Admin** (`/admin`) – Username/password login; dashboard at `/admin/dashboard` to view all registrations
+
+## Setup
+
+### 1. Environment variables
+
+Copy the example env and fill in your values:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **MONGODB_URI** – Your MongoDB connection string (e.g. from [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)).
+- **SESSION_SECRET** – A long random string used to sign the admin session cookie (e.g. `openssl rand -hex 32`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Create admin users
 
-## Learn More
+Admin users are stored in MongoDB. Add your first admin (run from project root, after `MONGODB_URI` is set):
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run add-admin -- admin your-password
+# or: node scripts/add-admin.js admin your-password
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To add more users later, run the same command with a different username and password.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Install and run
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Home** – Links to the registration form and admin.
+- **Register product** – Warranty registration form.
+- **Admin** – Log in with the username and password you configured; then view the registrations table.
+
+## Tech
+
+- **Next.js 16** (App Router), TypeScript, Tailwind CSS
+- **MongoDB** via Mongoose
+- **Admin auth** – Users stored in MongoDB; add users with `npm run add-admin -- <username> <password>`. Session cookie signed with `SESSION_SECRET`; password checked with bcrypt
