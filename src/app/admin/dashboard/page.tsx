@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -18,11 +18,18 @@ interface Registration {
   createdAt: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [editing, setEditing] = useState<Registration | null>(null);
   const [editForm, setEditForm] = useState<Partial<Registration>>({});
   const [saveConfirm, setSaveConfirm] = useState(false);
@@ -30,26 +37,46 @@ export default function AdminDashboardPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = () => {
-    fetch("/api/admin/registrations", { credentials: "include" })
-      .then((res) => {
-        if (res.status === 401) {
-          router.replace("/admin");
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data && !data.error) setRegistrations(data);
-        else if (data?.error) setError(data.error);
-      })
-      .catch(() => setError("Failed to load data"))
-      .finally(() => setLoading(false));
-  };
+  const load = useCallback(
+    (pageNum: number, search: string) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set("page", String(pageNum));
+      params.set("limit", String(PAGE_SIZE));
+      if (search.trim()) params.set("search", search.trim());
+      fetch(`/api/admin/registrations?${params}`, { credentials: "include" })
+        .then((res) => {
+          if (res.status === 401) {
+            router.replace("/admin");
+            return null;
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data && !data.error) {
+            setRegistrations(data.data ?? []);
+            setTotal(data.total ?? 0);
+            setPage(data.page ?? 1);
+            setTotalPages(data.totalPages ?? 1);
+          } else if (data?.error) setError(data.error);
+        })
+        .catch(() => setError("Failed to load data"))
+        .finally(() => setLoading(false));
+    },
+    [router]
+  );
 
   useEffect(() => {
-    load();
-  }, [router]);
+    load(page, searchQuery);
+  }, [page, searchQuery, load]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
@@ -101,7 +128,7 @@ export default function AdminDashboardPage() {
       }
       setEditing(null);
       setSaveConfirm(false);
-      load();
+      load(page, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update");
     } finally {
@@ -122,7 +149,7 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || "Failed to delete");
       }
       setDeleteId(null);
-      load();
+      load(page, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete");
     } finally {
@@ -147,97 +174,205 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 text-slate-900">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <Link href="/" className="text-slate-800 hover:text-slate-900 text-sm font-medium">
-              ← Home
-            </Link>
-            <h1 className="text-2xl font-bold text-slate-900">Warranty registrations</h1>
-            <Link
-              href="/admin/codes"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
-            >
-              Manage codes
-            </Link>
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-8 px-4 text-slate-900">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <Link href="/" className="text-slate-800 hover:text-slate-900 text-sm font-medium py-2">
+                ← Home
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Warranty registrations</h1>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/admin/codes"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px] inline-flex items-center justify-center"
+              >
+                Manage codes
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
+              >
+                Log out
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
-          >
-            Log out
-          </button>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 mb-6">
+          <div className="rounded-xl bg-red-50 border border-red-200 text-red-800 px-4 py-3 mb-4 text-sm">
             {error}
           </div>
         )}
 
+        <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <label htmlFor="search" className="sr-only">
+            Search by name, email, phone or code
+          </label>
+          <input
+            id="search"
+            type="search"
+            placeholder="Search by name, email, phone or code…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full sm:max-w-xs rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-sm"
+          />
+          {searchQuery && (
+            <span className="text-slate-600 text-sm">
+              {total} result{total !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+
         <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
           {registrations.length === 0 ? (
-            <div className="p-12 text-center text-slate-700">
-              No registrations yet.
+            <div className="p-8 sm:p-12 text-center text-slate-700 text-sm sm:text-base">
+              {searchQuery
+                ? "No entries match your search."
+                : "No registrations yet."}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Date</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Reg. code</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Name</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Email</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Phone</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Brand</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Product</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Shop name</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Date of purchase</th>
-                    <th className="text-left py-3 px-4 font-semibold text-slate-800">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrations.map((r) => (
-                    <tr key={r._id} className="border-b border-slate-100 hover:bg-slate-50 text-slate-900">
-                      <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
-                        {formatDate(r.createdAt)}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-slate-800">
-                        {r.warrantyRegistrationCode ?? "—"}
-                      </td>
-                      <td className="py-3 px-4 text-slate-800">
+            <>
+              {/* Mobile: card list */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {registrations.map((r) => (
+                  <div key={r._id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium text-slate-900">
                         {r.firstName} {r.lastName}
-                      </td>
-                      <td className="py-3 px-4 text-slate-800">{r.email}</td>
-                      <td className="py-3 px-4 text-slate-800">{r.phone}</td>
-                      <td className="py-3 px-4 text-slate-800">{r.brandName ?? "—"}</td>
-                      <td className="py-3 px-4 text-slate-800">{r.productName}</td>
-                      <td className="py-3 px-4 text-slate-800">{r.placeOfPurchase}</td>
-                      <td className="py-3 px-4 text-slate-800">{r.dateOfPurchase}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(r)}
-                            className="text-slate-700 hover:text-slate-900 underline text-xs font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteId(r._id)}
-                            className="text-red-600 hover:text-red-800 underline text-xs font-medium"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+                      </span>
+                      <span className="font-mono text-slate-600 text-xs shrink-0">
+                        {r.warrantyRegistrationCode ?? "—"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-0.5">
+                      <p>{r.email}</p>
+                      <p>{r.phone}</p>
+                      {r.productName ? <p>{r.productName}</p> : null}
+                      <p>{r.placeOfPurchase} · {r.dateOfPurchase}</p>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(r)}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(r._id)}
+                        className="rounded-lg border border-red-200 bg-white px-3 py-2 text-red-600 text-sm font-medium hover:bg-red-50 min-h-[44px]"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table - scrollable, full text visible */}
+              <div className="hidden md:block overflow-x-auto overflow-y-visible">
+                <table className="w-full text-sm border-collapse min-w-max">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Date</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Reg. code</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Name</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Email</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Phone</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Brand</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Product</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Shop name</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Date of purchase</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {registrations.map((r) => (
+                      <tr key={r._id} className="border-b border-slate-100 hover:bg-slate-50 text-slate-900">
+                        <td className="py-3 px-3 text-slate-700 whitespace-nowrap align-top">
+                          {formatDate(r.createdAt)}
+                        </td>
+                        <td className="py-3 px-3 font-mono text-slate-800 whitespace-nowrap align-top">
+                          {r.warrantyRegistrationCode ?? "—"}
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top whitespace-nowrap">
+                          {r.firstName} {r.lastName}
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top">
+                          <span className="block break-all">{r.email}</span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top whitespace-nowrap">
+                          {r.phone}
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top">
+                          <span className="block">{r.brandName ?? "—"}</span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top">
+                          <span className="block">{r.productName ?? "—"}</span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top">
+                          <span className="block">{r.placeOfPurchase}</span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-800 align-top whitespace-nowrap">
+                          {r.dateOfPurchase}
+                        </td>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(r)}
+                              className="text-slate-700 hover:text-slate-900 underline text-xs font-medium py-1"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteId(r._id)}
+                              className="text-red-600 hover:text-red-800 underline text-xs font-medium py-1"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {totalPages > 1 && (
+            <div className="border-t border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+              <p className="text-sm text-slate-600">
+                Page {page} of {totalPages}
+                {total > 0 && (
+                  <span className="ml-1">
+                    ({((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} of {total})
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -245,14 +380,14 @@ export default function AdminDashboardPage() {
 
       {/* Edit modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-slate-200 shrink-0">
               <h2 className="text-lg font-semibold text-slate-900">Edit registration</h2>
               <p className="text-sm text-slate-600 mt-1">Code: {editing.warrantyRegistrationCode}</p>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">First name</label>
                   <input
@@ -321,17 +456,17 @@ export default function AdminDashboardPage() {
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-slate-200 flex flex-col gap-2">
+            <div className="p-4 sm:p-6 border-t border-slate-200 flex flex-col gap-2 shrink-0">
               {saveConfirm && (
-                <p className="text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+                <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-3 py-2">
                   Are you sure you want to save these changes?
                 </p>
               )}
-              <div className="flex gap-2 justify-end">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => { setEditing(null); setSaveConfirm(false); }}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
                 >
                   Cancel
                 </button>
@@ -339,7 +474,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={saving}
-                  className="rounded-lg bg-slate-800 px-4 py-2 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                  className="rounded-xl bg-slate-800 px-4 py-3 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 min-h-[44px]"
                 >
                   {saving ? "Saving…" : saveConfirm ? "Yes, save changes" : "Save"}
                 </button>
@@ -351,18 +486,18 @@ export default function AdminDashboardPage() {
 
       {/* Delete confirmation modal */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-2">Delete registration</h2>
             <p className="text-slate-700 text-sm mb-6">
               Are you sure you want to delete this registration? The warranty code will become available again for reuse.
             </p>
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setDeleteId(null)}
                 disabled={deleting}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
               >
                 Cancel
               </button>
@@ -370,7 +505,7 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-lg bg-red-600 px-4 py-2 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-3 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 min-h-[44px]"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>

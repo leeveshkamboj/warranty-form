@@ -3,16 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 
-// Brand and Product options – match Cognito dropdowns (customize as needed)
-const BRAND_OPTIONS = [
-  { value: "", label: "Select Brand" },
-  { value: "CHIHIROS", label: "CHIHIROS" },
-];
+// Product options – match Cognito dropdowns (customize as needed)
 
 const PRODUCT_OPTIONS = [
   { value: "", label: "Select Model" },
   { value: "RGB VIVID III", label: "RGB VIVID III" },
-  { value: "RGB VIVID II BLACK / WHITE", label: "RGB VIVID II BLACK / WHITE" },
+  { value: "RGB VIVID MATE", label: "RGB VIVID MATE" },
   { value: "RGB VIVID MINI", label: "RGB VIVID MINI" },
   { value: "WRGB II 30", label: "WRGB II 30" },
   { value: "WRGB II 45", label: "WRGB II 45" },
@@ -50,7 +46,7 @@ export default function RegisterPage() {
     lastName: "",
     email: "",
     phone: "",
-    brandName: "",
+    brandName: "CHIHIROS",
     productName: "",
     placeOfPurchase: "",
     dateOfPurchase: "",
@@ -67,6 +63,11 @@ export default function RegisterPage() {
     const code = form.warrantyRegistrationCode.replace(/\D/g, "");
     if (code.length !== 8) {
       setError("Entered code is not exact 8 digits");
+      return;
+    }
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10) {
+      setError("Phone number must be at least 10 digits");
       return;
     }
     setSubmitting(true);
@@ -88,8 +89,8 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-6 sm:p-8 text-center">
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -101,7 +102,7 @@ export default function RegisterPage() {
           </p>
           <Link
             href="/"
-            className="inline-flex items-center justify-center rounded-lg bg-slate-800 px-5 py-2.5 text-white font-medium hover:bg-slate-700"
+            className="inline-flex items-center justify-center rounded-xl bg-slate-800 px-5 py-3 text-white font-medium hover:bg-slate-700 min-h-[44px] w-full sm:w-auto"
           >
             Back to home
           </Link>
@@ -111,28 +112,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-slate-800 hover:text-slate-900 text-sm mb-6 inline-block font-medium">
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-8 px-4">
+      <div className="max-w-2xl mx-auto w-full">
+        <Link href="/" className="text-slate-800 hover:text-slate-900 text-sm mb-4 sm:mb-6 inline-flex items-center font-medium min-h-[44px] py-2">
           ← Back
         </Link>
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden text-slate-900">
-          <div className="bg-slate-800 text-white px-6 py-5">
-            <h1 className="text-2xl font-bold">Product Warranty Registration</h1>
+          <div className="bg-slate-800 text-white px-4 sm:px-6 py-4 sm:py-5">
+            <h1 className="text-xl sm:text-2xl font-bold">Product Warranty Registration</h1>
           </div>
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Name * – First / Last */}
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 sm:space-y-6">
+            {/* Name * – First / Last (same line) */}
             <fieldset className="border-0 p-0 m-0">
               <legend className="text-sm font-medium text-slate-800 mb-2">
                 Name <span className="text-red-600">*</span>
               </legend>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <input
                   type="text"
                   autoComplete="given-name"
@@ -155,7 +150,7 @@ export default function RegisterPage() {
             </fieldset>
 
             {/* Phone * | Email * */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-slate-800 mb-1">
                   Phone <span className="text-red-600">*</span>
@@ -165,8 +160,10 @@ export default function RegisterPage() {
                   type="tel"
                   autoComplete="tel"
                   required
+                  minLength={10}
                   value={form.phone}
                   onChange={(e) => update("phone", e.target.value)}
+                  placeholder="Min. 10 digits"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                 />
               </div>
@@ -187,26 +184,19 @@ export default function RegisterPage() {
             </div>
 
             {/* Product Information */}
-            <section className="border-t border-slate-200 pt-6" aria-labelledby="product-info-heading">
-              <h2 id="product-info-heading" className="text-lg font-semibold text-slate-900 mb-4">
+            <section className="border-t border-slate-200 pt-5 sm:pt-6" aria-labelledby="product-info-heading">
+              <h2 id="product-info-heading" className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4">
                 Product Information
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                 <div>
-                  <label htmlFor="brand" className="block text-sm font-medium text-slate-800 mb-1">
+                  <label className="block text-sm font-medium text-slate-800 mb-1">
                     Brand Name
                   </label>
-                  <select
-                    id="brand"
-                    value={form.brandName}
-                    onChange={(e) => update("brandName", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
-                  >
-                    {BRAND_OPTIONS.map((o) => (
-                      <option key={o.value || "empty"} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900">
+                    CHIHIROS
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="product" className="block text-sm font-medium text-slate-800 mb-1">
@@ -230,7 +220,7 @@ export default function RegisterPage() {
                 <div className="text-sm font-medium text-slate-900">WARRANTY PERIOD - ONE YEAR</div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                 <div>
                   <label htmlFor="shop" className="block text-sm font-medium text-slate-800 mb-1">
                     Where did you purchase this product (Shop Name)? <span className="text-red-600">*</span>
@@ -284,11 +274,17 @@ export default function RegisterPage() {
               </div>
             </section>
 
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="pt-4">
               <button
                 type="submit"
                 disabled={submitting}
-                className="rounded-lg bg-slate-800 px-6 py-3 text-white font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="w-full sm:w-auto rounded-xl bg-slate-800 px-6 py-3.5 text-white font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[48px]"
               >
                 {submitting ? "Submitting…" : "Register"}
               </button>

@@ -7,7 +7,7 @@ export interface IWarrantyRegistration {
   email: string;
   phone: string;
   brandName?: string;
-  productName: string;
+  productName?: string;
   dateOfPurchase: string;
   placeOfPurchase: string; // Where did you purchase (Shop Name)
   warrantyRegistrationCode: string;
@@ -21,7 +21,7 @@ const schema = new Schema<IWarrantyRegistration>(
     email: { type: String, required: true },
     phone: { type: String, required: true },
     brandName: String,
-    productName: { type: String, required: true },
+    productName: { type: String, default: "" },
     dateOfPurchase: { type: String, required: true },
     placeOfPurchase: { type: String, required: true },
     warrantyRegistrationCode: { type: String, required: true },

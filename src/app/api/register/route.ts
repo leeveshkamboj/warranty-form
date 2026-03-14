@@ -63,6 +63,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const phoneDigits = String(phone).replace(/\D/g, "");
+    if (phoneDigits.length < 10) {
+      return NextResponse.json(
+        { error: "Phone number must be at least 10 digits" },
+        { status: 400 }
+      );
+    }
+
     const registration = await WarrantyRegistration.create({
       warrantyRegistrationCode: codeStr,
       firstName,

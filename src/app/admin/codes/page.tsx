@@ -197,54 +197,56 @@ export default function AdminCodesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 text-slate-900">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <Link href="/admin/dashboard" className="text-slate-800 hover:text-slate-900 text-sm font-medium">
-              ← Registrations
-            </Link>
-            <h1 className="text-2xl font-bold text-slate-900">Manage codes</h1>
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-8 px-4 text-slate-900">
+      <div className="max-w-5xl mx-auto w-full">
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <Link href="/admin/dashboard" className="text-slate-800 hover:text-slate-900 text-sm font-medium py-2">
+                ← Registrations
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Manage codes</h1>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px] w-fit"
+            >
+              Log out
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
-          >
-            Log out
-          </button>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 mb-6">
+          <div className="rounded-xl bg-red-50 border border-red-200 text-red-800 px-4 py-3 mb-4 text-sm">
             {error}
           </div>
         )}
         {addResult && (
-          <div className="rounded-lg bg-green-50 border border-green-200 text-green-800 px-4 py-3 mb-6">
+          <div className="rounded-xl bg-green-50 border border-green-200 text-green-800 px-4 py-3 mb-4 text-sm">
             Added {addResult.added} code(s). {addResult.skipped > 0 ? `Skipped ${addResult.skipped} (already exist).` : ""}
           </div>
         )}
 
         {/* Add codes */}
-        <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden mb-6 sm:mb-8">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50">
             <h2 className="text-lg font-semibold text-slate-900">Add codes</h2>
           </div>
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
             <div>
               <label className="block text-sm font-medium text-slate-800 mb-2">Bulk add from .txt file</label>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
                 <input
                   type="file"
                   accept=".txt,text/plain"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="block text-sm text-slate-800 file:mr-3 file:rounded file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-white file:text-sm"
+                  className="block text-sm text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-4 file:py-2.5 file:text-white file:text-sm w-full sm:w-auto"
                 />
                 <button
                   type="button"
                   onClick={addFromFile}
                   disabled={!file || adding}
-                  className="rounded-lg bg-slate-800 px-4 py-2 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                  className="rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 min-h-[44px]"
                 >
                   Upload and add
                 </button>
@@ -258,13 +260,13 @@ export default function AdminCodesPage() {
                 onChange={(e) => setBulkPaste(e.target.value)}
                 placeholder="Paste codes here, one per line"
                 rows={4}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
               />
               <button
                 type="button"
                 onClick={addFromPaste}
                 disabled={!bulkPaste.trim() || adding}
-                className="mt-2 rounded-lg bg-slate-800 px-4 py-2 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                className="mt-2 rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
               >
                 Add from paste
               </button>
@@ -276,13 +278,13 @@ export default function AdminCodesPage() {
                 onChange={(e) => setManualCodes(e.target.value)}
                 placeholder="Enter one or more 8-digit codes (one per line)"
                 rows={2}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
               />
               <button
                 type="button"
                 onClick={addManual}
                 disabled={!manualCodes.trim() || adding}
-                className="mt-2 rounded-lg bg-slate-800 px-4 py-2 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                className="mt-2 rounded-xl bg-slate-800 px-4 py-2.5 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 min-h-[44px] w-full sm:w-auto"
               >
                 Add codes
               </button>
@@ -292,14 +294,14 @@ export default function AdminCodesPage() {
 
         {/* List */}
         <div className="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center gap-4">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
             <h2 className="text-lg font-semibold text-slate-900">Codes</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {(["all", "unused", "used"] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  className={`rounded-xl px-3 py-2 text-sm font-medium min-h-[44px] ${
                     filter === f ? "bg-slate-800 text-white" : "bg-white border border-slate-300 text-slate-800 hover:bg-slate-50"
                   }`}
                 >
@@ -310,9 +312,9 @@ export default function AdminCodesPage() {
           </div>
           <div className="overflow-x-auto">
             {codes.length === 0 ? (
-              <div className="p-12 text-center text-slate-700">No codes found.</div>
+              <div className="p-8 sm:p-12 text-center text-slate-700 text-sm sm:text-base">No codes found.</div>
             ) : (
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[280px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="text-left py-3 px-4 font-semibold text-slate-800">Code</th>
@@ -339,7 +341,7 @@ export default function AdminCodesPage() {
                             <button
                               type="button"
                               onClick={() => setMarkUnusedId(r._id)}
-                              className="text-slate-700 hover:text-slate-900 underline text-xs font-medium"
+                              className="text-slate-700 hover:text-slate-900 underline text-xs font-medium py-1 px-0.5 min-h-0 min-w-0"
                             >
                               Mark unused
                             </button>
@@ -347,7 +349,7 @@ export default function AdminCodesPage() {
                           <button
                             type="button"
                             onClick={() => setDeleteCodeId(r._id)}
-                            className="text-red-600 hover:text-red-800 underline text-xs font-medium"
+                            className="text-red-600 hover:text-red-800 underline text-xs font-medium py-1 px-0.5 min-h-0 min-w-0"
                           >
                             Delete
                           </button>
@@ -364,18 +366,18 @@ export default function AdminCodesPage() {
 
       {/* Mark unused confirmation */}
       {markUnusedId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-2">Mark code as unused</h2>
             <p className="text-slate-700 text-sm mb-6">
               This code will become available for a new registration. The existing registration record will not be deleted. Continue?
             </p>
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setMarkUnusedId(null)}
                 disabled={actioning}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
               >
                 Cancel
               </button>
@@ -383,7 +385,7 @@ export default function AdminCodesPage() {
                 type="button"
                 onClick={handleMarkUnused}
                 disabled={actioning}
-                className="rounded-lg bg-slate-800 px-4 py-2 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                className="rounded-xl bg-slate-800 px-4 py-3 text-white text-sm font-medium hover:bg-slate-700 disabled:opacity-50 min-h-[44px]"
               >
                 {actioning ? "Updating…" : "Mark unused"}
               </button>
@@ -394,18 +396,18 @@ export default function AdminCodesPage() {
 
       {/* Delete code confirmation */}
       {deleteCodeId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-2">Delete code</h2>
             <p className="text-slate-700 text-sm mb-6">
               This code will be permanently removed. It cannot be used for registration anymore. Are you sure?
             </p>
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setDeleteCodeId(null)}
                 disabled={actioning}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-slate-800 text-sm font-medium hover:bg-slate-50 min-h-[44px]"
               >
                 Cancel
               </button>
@@ -413,7 +415,7 @@ export default function AdminCodesPage() {
                 type="button"
                 onClick={handleDeleteCode}
                 disabled={actioning}
-                className="rounded-lg bg-red-600 px-4 py-2 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                className="rounded-xl bg-red-600 px-4 py-3 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 min-h-[44px]"
               >
                 {actioning ? "Deleting…" : "Delete"}
               </button>
