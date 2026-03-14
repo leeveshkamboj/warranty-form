@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WarrantyRegistration } from "@/models/WarrantyRegistration";
+import { WarrantyCode } from "@/models/WarrantyCode";
 
 export async function POST(request: Request) {
   try {
@@ -17,19 +18,32 @@ export async function POST(request: Request) {
       placeOfPurchase,
     } = body;
 
-    // Warranty registration code: must be exactly 8 digits
     const codeStr = String(warrantyRegistrationCode ?? "").trim();
+
+    // 1) Not exactly 8 digits
     if (!/^\d{8}$/.test(codeStr)) {
       return NextResponse.json(
-        { error: "Please enter 8 digits" },
+        { error: "Entered code is not exact 8 digits" },
         { status: 400 }
       );
     }
 
-    const validCodes = process.env.VALID_REGISTRATION_CODES?.split(",").map((c) => c.trim()).filter(Boolean);
-    if (validCodes && validCodes.length > 0 && !validCodes.includes(codeStr)) {
+    await connectDB();
+
+    const codeDoc = await WarrantyCode.findOne({ code: codeStr }).lean();
+
+    // 2) Code not in backend list
+    if (!codeDoc) {
       return NextResponse.json(
-        { error: "Invalid registration code" },
+        { error: "Entered code is invalid" },
+        { status: 400 }
+      );
+    }
+
+    // 3) Code already used
+    if (codeDoc.used) {
+      return NextResponse.json(
+        { error: "Entered code is already used" },
         { status: 400 }
       );
     }
@@ -49,8 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await connectDB();
-    await WarrantyRegistration.create({
+    const registration = await WarrantyRegistration.create({
       warrantyRegistrationCode: codeStr,
       firstName,
       lastName,
@@ -61,6 +74,11 @@ export async function POST(request: Request) {
       dateOfPurchase,
       placeOfPurchase,
     });
+
+    await WarrantyCode.updateOne(
+      { code: codeStr },
+      { used: true, usedAt: new Date(), registrationId: registration._id }
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {

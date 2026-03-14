@@ -7,7 +7,6 @@ import Link from "next/link";
 const BRAND_OPTIONS = [
   { value: "", label: "Select Brand" },
   { value: "CHIHIROS", label: "CHIHIROS" },
-  { value: "Other", label: "Other" },
 ];
 
 const PRODUCT_OPTIONS = [
@@ -67,7 +66,7 @@ export default function RegisterPage() {
     setError("");
     const code = form.warrantyRegistrationCode.replace(/\D/g, "");
     if (code.length !== 8) {
-      setError("Please enter 8 digits");
+      setError("Entered code is not exact 8 digits");
       return;
     }
     setSubmitting(true);
