@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -13,12 +13,33 @@ interface CodeRow {
   createdAt: string;
 }
 
+interface RegistrationDetail {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  brandName?: string;
+  productName?: string;
+  dateOfPurchase: string;
+  placeOfPurchase: string;
+  warrantyRegistrationCode: string;
+  createdAt: string;
+}
+
+const PAGE_SIZE = 20;
+
 export default function AdminCodesPage() {
   const router = useRouter();
   const [codes, setCodes] = useState<CodeRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "used" | "unused">("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [addResult, setAddResult] = useState<{ added: number; skipped: number } | null>(null);
   const [adding, setAdding] = useState(false);
   const [manualCodes, setManualCodes] = useState("");
@@ -27,30 +48,56 @@ export default function AdminCodesPage() {
   const [markUnusedId, setMarkUnusedId] = useState<string | null>(null);
   const [deleteCodeId, setDeleteCodeId] = useState<string | null>(null);
   const [actioning, setActioning] = useState(false);
+  const [viewUsedRegistrationId, setViewUsedRegistrationId] = useState<string | null>(null);
+  const [registrationDetail, setRegistrationDetail] = useState<RegistrationDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const loadCodes = () => {
-    const usedParam = filter === "used" ? "true" : filter === "unused" ? "false" : "";
-    const url = usedParam ? `/api/admin/codes?used=${usedParam}` : "/api/admin/codes";
-    fetch(url, { credentials: "include" })
-      .then((res) => {
-        if (res.status === 401) {
-          router.replace("/admin");
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data && !data.error) setCodes(data);
-        else if (data?.error) setError(data.error);
-      })
-      .catch(() => setError("Failed to load codes"))
-      .finally(() => setLoading(false));
-  };
+  const loadCodes = useCallback(
+    (pageNum: number, search: string) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set("page", String(pageNum));
+      params.set("limit", String(PAGE_SIZE));
+      if (filter === "used") params.set("used", "true");
+      if (filter === "unused") params.set("used", "false");
+      if (search.trim()) params.set("search", search.trim());
+      fetch(`/api/admin/codes?${params}`, { credentials: "include" })
+        .then((res) => {
+          if (res.status === 401) {
+            router.replace("/admin");
+            return null;
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (data && !data.error) {
+            setCodes(data.data ?? []);
+            setTotal(data.total ?? 0);
+            setPage(data.page ?? 1);
+            setTotalPages(data.totalPages ?? 1);
+          } else if (data?.error) setError(data.error);
+        })
+        .catch(() => setError("Failed to load codes"))
+        .finally(() => setLoading(false));
+    },
+    [router, filter]
+  );
 
   useEffect(() => {
-    setLoading(true);
-    loadCodes();
-  }, [router, filter]);
+    loadCodes(page, searchQuery);
+  }, [page, searchQuery, loadCodes]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
@@ -74,7 +121,7 @@ export default function AdminCodesPage() {
       if (!res.ok) throw new Error(data.error || "Failed to add");
       setAddResult({ added: data.added, skipped: data.skipped ?? 0 });
       setBulkPaste("");
-      loadCodes();
+      loadCodes(1, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add codes");
     } finally {
@@ -99,7 +146,7 @@ export default function AdminCodesPage() {
       if (!res.ok) throw new Error(data.error || "Failed to add");
       setAddResult({ added: data.added, skipped: data.skipped ?? 0 });
       setFile(null);
-      loadCodes();
+      loadCodes(1, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add codes");
     } finally {
@@ -128,12 +175,25 @@ export default function AdminCodesPage() {
       if (!res.ok) throw new Error(data.error || "Failed to add");
       setAddResult({ added: data.added, skipped: data.skipped ?? 0 });
       setManualCodes("");
-      loadCodes();
+      loadCodes(1, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add codes");
     } finally {
       setAdding(false);
     }
+  };
+
+  const openViewUsed = (registrationId: string) => {
+    setViewUsedRegistrationId(registrationId);
+    setRegistrationDetail(null);
+    setLoadingDetail(true);
+    fetch(`/api/admin/registrations/${registrationId}`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setRegistrationDetail(data ?? null);
+      })
+      .catch(() => setRegistrationDetail(null))
+      .finally(() => setLoadingDetail(false));
   };
 
   const formatDate = (d: string) => {
@@ -158,7 +218,7 @@ export default function AdminCodesPage() {
         throw new Error(data.error || "Failed to mark unused");
       }
       setMarkUnusedId(null);
-      loadCodes();
+      loadCodes(page, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark unused");
     } finally {
@@ -180,7 +240,7 @@ export default function AdminCodesPage() {
         throw new Error(data.error || "Failed to delete");
       }
       setDeleteCodeId(null);
-      loadCodes();
+      loadCodes(page, searchQuery);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete code");
     } finally {
@@ -309,10 +369,26 @@ export default function AdminCodesPage() {
                 </button>
               ))}
             </div>
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="search"
+                placeholder="Search by code…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-sm"
+              />
+            </div>
+            {searchQuery && (
+              <span className="text-slate-600 text-sm">
+                {total} result{total !== 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           <div className="overflow-x-auto">
             {codes.length === 0 ? (
-              <div className="p-8 sm:p-12 text-center text-slate-700 text-sm sm:text-base">No codes found.</div>
+              <div className="p-8 sm:p-12 text-center text-slate-700 text-sm sm:text-base">
+                {searchQuery ? "No codes match your search." : "No codes found."}
+              </div>
             ) : (
               <table className="w-full text-sm min-w-[280px]">
                 <thead>
@@ -337,6 +413,15 @@ export default function AdminCodesPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2 flex-wrap">
+                          {r.used && r.registrationId && (
+                            <button
+                              type="button"
+                              onClick={() => openViewUsed(r.registrationId!)}
+                              className="text-slate-700 hover:text-slate-900 underline text-xs font-medium py-1 px-0.5 min-h-0 min-w-0"
+                            >
+                              Details
+                            </button>
+                          )}
                           {r.used && (
                             <button
                               type="button"
@@ -361,6 +446,36 @@ export default function AdminCodesPage() {
               </table>
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="border-t border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+              <p className="text-sm text-slate-600">
+                Page {page} of {totalPages}
+                {total > 0 && (
+                  <span className="ml-1">
+                    ({((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} of {total})
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-800 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -419,6 +534,69 @@ export default function AdminCodesPage() {
               >
                 {actioning ? "Deleting…" : "Delete"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View who used – registration detail modal */}
+      {viewUsedRegistrationId && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Registration (who used this code)</h2>
+              <button
+                type="button"
+                onClick={() => { setViewUsedRegistrationId(null); setRegistrationDetail(null); }}
+                className="rounded-lg p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              {loadingDetail ? (
+                <p className="text-slate-600 text-sm">Loading…</p>
+              ) : registrationDetail ? (
+                <dl className="grid grid-cols-1 gap-3 text-sm">
+                  <div>
+                    <dt className="text-slate-500 font-medium">Name</dt>
+                    <dd className="text-slate-900">{registrationDetail.firstName} {registrationDetail.lastName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Email</dt>
+                    <dd className="text-slate-900 break-all">{registrationDetail.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Phone</dt>
+                    <dd className="text-slate-900">{registrationDetail.phone}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Brand</dt>
+                    <dd className="text-slate-900">{registrationDetail.brandName ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Product</dt>
+                    <dd className="text-slate-900">{registrationDetail.productName ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Shop name</dt>
+                    <dd className="text-slate-900">{registrationDetail.placeOfPurchase}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Date of purchase</dt>
+                    <dd className="text-slate-900">{registrationDetail.dateOfPurchase}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 font-medium">Registered at</dt>
+                    <dd className="text-slate-900">{registrationDetail.createdAt ? formatDate(registrationDetail.createdAt) : "—"}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-slate-600 text-sm">Could not load registration details.</p>
+              )}
             </div>
           </div>
         </div>

@@ -13,6 +13,30 @@ async function requireAdmin() {
   return user ? username : null;
 }
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const ok = await requireAdmin();
+  if (!ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const { id } = await params;
+    const doc = await WarrantyRegistration.findById(id).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Registration not found" }, { status: 404 });
+    }
+    return NextResponse.json(doc);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Failed to fetch registration" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

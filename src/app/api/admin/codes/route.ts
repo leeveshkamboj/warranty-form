@@ -18,6 +18,9 @@ function extractCodes(input: string): string[] {
   return Array.from(codes);
 }
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
 export async function GET(request: Request) {
   const username = await getAdminSession();
   if (!username) {
@@ -31,13 +34,38 @@ export async function GET(request: Request) {
     }
     const { searchParams } = new URL(request.url);
     const used = searchParams.get("used"); // "true" | "false" | omit = all
-    const query: { used?: boolean } = {};
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+    const limit = Math.min(
+      MAX_LIMIT,
+      Math.max(1, parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT)
+    );
+    const search = searchParams.get("search")?.trim().replace(/\D/g, "") ?? "";
+
+    const query: { used?: boolean; code?: RegExp } = {};
     if (used === "true") query.used = true;
     if (used === "false") query.used = false;
-    const list = await WarrantyCode.find(query)
-      .sort({ createdAt: -1 })
-      .lean();
-    return NextResponse.json(list);
+    if (search.length > 0) {
+      query.code = new RegExp(search, "i");
+    }
+
+    const [list, total] = await Promise.all([
+      WarrantyCode.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      WarrantyCode.countDocuments(query),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return NextResponse.json({
+      data: list,
+      total,
+      page,
+      limit,
+      totalPages,
+    });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
